@@ -180,6 +180,22 @@ btnTransfer.addEventListener('click', function (e) {
   // console.log(ammount, recieverAcc);
 });
 
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const loan = +inputLoanAmount.value;
+
+  if (loan > 0 && currentAccount.movements.some(mov => mov >= loan * 0.1)) {
+    // Add movement
+    currentAccount.movements.push(loan);
+
+    // Update UI
+    updateUI(currentAccount);
+  }
+  inputLoanAmount.value = '';
+  inputLoanAmount.blur();
+});
+
 btnClose.addEventListener('click', function (e) {
   e.preventDefault();
 
