@@ -94,20 +94,20 @@ const formatCur = function (value, locale, currency) {
   }).format(value);
 };
 
-const displayMovements = function (acc, sort = false) {
+const displayMovements = function (account, sort = false) {
   containerMovements.innerHTML = '';
 
   const movs = sort
-    ? acc.movements.slice().sort((a, b) => a - b)
-    : acc.movements;
+    ? account.movements.slice().sort((a, b) => a - b)
+    : account.movements;
 
   movs.forEach(function (mov, i) {
     const type = mov > 0 ? 'deposit' : 'withdrawal';
 
-    const date = new Date(acc.movementsDates[i]);
-    const displayDate = formatMovementDate(date, acc.locale);
+    const date = new Date(account.movementsDates[i]);
+    const displayDate = formatMovementDate(date, account.locale);
 
-    const formattedMov = formatCur(mov, acc.locale, acc.currency);
+    const formattedMov = formatCur(mov, account.locale, account.currency);
 
     const html = `
     <div class="movements__row">
@@ -186,13 +186,40 @@ const updateUI = function (acc) {
 };
 // Event handlers
 
-let currentAccount;
+const startLogOutTimer = function () {
+  const tick = function () {
+    const min = `${Math.trunc(time / 60)}`.padStart(2, 0);
+    const sec = `${time % 60}`.padStart(2, 0);
 
-// FAKE ALWAYS LOGGED IN
+    // in each callback call print remaining time to the UI
+    labelTimer.textContent = `${min}:${sec}`;
 
-currentAccount = account1;
-updateUI(currentAccount);
-containerApp.style.opacity = 100;
+    // when 0 seconds, stop timer and log out user
+    if (time === 0) {
+      clearInterval(timer);
+      containerApp.style.opacity = 0;
+      labelWelcome.textContent = 'Log in to get started';
+    }
+    // decriese 1 sec
+    time--;
+  };
+  // Set time to 5 minutes
+  let time = 120;
+
+  // Call the timer every second
+  tick();
+  const timer = setInterval(tick, 1000);
+
+  return timer;
+};
+
+let currentAccount, timer;
+
+// // FAKE ALWAYS LOGGED IN
+
+// currentAccount = account1;
+// updateUI(currentAccount);
+// containerApp.style.opacity = 100;
 
 // Experimenting with API
 const now = new Date();
@@ -239,6 +266,10 @@ btnLogin.addEventListener('click', function (e) {
     inputLoginUsername.value = inputLoginPin.value = '';
     inputLoginPin.blur();
 
+    //Timer
+    if (timer) clearInterval(timer);
+    timer = startLogOutTimer();
+
     updateUI(currentAccount);
   }
 });
@@ -269,7 +300,9 @@ btnTransfer.addEventListener('click', function (e) {
     updateUI(currentAccount);
   }
 
-  // console.log(ammount, recieverAcc);
+  // Reset the timer
+  clearInterval(timer);
+  timer = startLogOutTimer();
 });
 
 btnLoan.addEventListener('click', function (e) {
@@ -278,12 +311,17 @@ btnLoan.addEventListener('click', function (e) {
   const loan = Math.floor(inputLoanAmount.value);
 
   if (loan > 0 && currentAccount.movements.some(mov => mov >= loan * 0.1)) {
-    // Add movement
-    currentAccount.movements.push(loan);
-    currentAccount.movementsDates.push(new Date().toISOString());
+    setTimeout(function () {
+      // Add movement
+      currentAccount.movements.push(loan);
+      currentAccount.movementsDates.push(new Date().toISOString());
 
-    // Update UI
-    updateUI(currentAccount);
+      // Update UI
+      updateUI(currentAccount);
+
+      clearInterval(timer);
+      timer = startLogOutTimer();
+    }, 2500);
   }
   inputLoanAmount.value = '';
   inputLoanAmount.blur();
@@ -311,10 +349,8 @@ btnClose.addEventListener('click', function (e) {
 
 let sorted = false;
 
-btnSort.addEventListener('click', function (e) {
-  e.preventDefault();
-
-  displayMovements(currentAccount.movements, !sorted);
+btnSort.addEventListener('click', function () {
+  displayMovements(currentAccount, !sorted);
   sorted = !sorted;
 });
 
